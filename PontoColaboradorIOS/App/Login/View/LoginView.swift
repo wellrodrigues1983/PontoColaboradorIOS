@@ -10,125 +10,125 @@ import SwiftUI
 struct LoginView: View {
     @StateObject private var viewModel = LoginViewModel()
     @State private var isSecured: Bool = true
-    @State private var showRecover = false
+    @Environment(\.managedObjectContext) private var viewContext
+
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
+        animation: .default)
+    private var items: FetchedResults<Item>
+
+    @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
+    
 
     var body: some View {
-        ZStack {
-            Color.white.ignoresSafeArea()
-
-            VStack {
-                HStack {
-                    Text("Login")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.black)
-                    Spacer()
-                }
-                .padding(.top, 20)
-                .padding(.horizontal)
-
-                Spacer(minLength: 20)
-
-                VStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Email", text: $viewModel.email)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-
-                        if let msg = viewModel.emailValidationMessage {
-                            Text(msg)
-                                .foregroundColor(.red)
-                                .font(.caption)
-                        }
+        NavigationView {
+            ZStack {
+                Color(.appPrimary).ignoresSafeArea()
+                VStack {
+                    VStack {
+                        Spacer()
+                        Text("Login")
+                            .font(.largeTitle)
+                            .foregroundColor(.textPrimary)
+                            .fontWeight(.bold)
                     }
+                    .padding(.top, 20)
+                    .padding(.horizontal)
+                    .padding()
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        ZStack(alignment: .trailing) {
-                            Group {
-                                if isSecured {
-                                    SecureField("Senha", text: $viewModel.password)
-                                } else {
-                                    TextField("Senha", text: $viewModel.password)
+                    Spacer()
+
+                    VStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            TextField("Email", text: $viewModel.email)
+                                .keyboardType(.emailAddress)
+                                .autocapitalization(.none)
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+
+                            if !viewModel.email.elementsEqual("") {
+                                if let msg = viewModel.emailValidationMessage {
+                                    Text(msg)
+                                        .foregroundColor(.red)
+                                        .font(.caption)
                                 }
                             }
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
+                        }
 
-                            Button(action: { isSecured.toggle() }) {
-                                Image(systemName: isSecured ? "eye.slash" : "eye")
-                                    .foregroundColor(.gray)
-                                    .padding(.trailing, 12)
+                        VStack(alignment: .leading, spacing: 4) {
+                            ZStack(alignment: .trailing) {
+                                Group {
+                                    if isSecured {
+                                        SecureField("Senha", text: $viewModel.password)
+                                    } else {
+                                        TextField("Senha", text: $viewModel.password)
+                                    }
+                                }
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+
+                                Button(action: { isSecured.toggle() }) {
+                                    Image(systemName: isSecured ? "eye.slash" : "eye")
+                                        .foregroundColor(.gray)
+                                        .padding(.trailing, 12)
+                                }
+                            }
+                            if !viewModel.password.elementsEqual("") {
+                                if let msg = viewModel.passwordValidationMessage {
+                                    Text(msg)
+                                        .foregroundColor(.red)
+                                        .font(.caption)
+                                }
                             }
                         }
 
-                        if let msg = viewModel.passwordValidationMessage {
-                            Text(msg)
+                        Button(action: {
+                            Task { await viewModel.login() }
+                        }) {
+                            if viewModel.isLoading {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.blue.opacity(0.7))
+                                    .cornerRadius(8)
+                            } else {
+                                Text("Entrar")
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(viewModel.isFormValid ? Color.blue : Color.gray)
+                                    .cornerRadius(8)
+                            }
+                        }
+                        .disabled(!viewModel.isFormValid || viewModel.isLoading)
+
+                        if let error = viewModel.errorMessage {
+                            Text(error)
                                 .foregroundColor(.red)
                                 .font(.caption)
+                                .multilineTextAlignment(.center)
+                                .padding(.top, 4)
                         }
                     }
-
-                    Button(action: {
-                        Task { await viewModel.login() }
-                    }) {
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.blue.opacity(0.7))
-                                .cornerRadius(8)
-                        } else {
-                            Text("Entrar")
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(viewModel.isFormValid ? Color.blue : Color.gray)
-                                .cornerRadius(8)
-                        }
-                    }
-                    .disabled(!viewModel.isFormValid || viewModel.isLoading)
-
-                    if let error = viewModel.errorMessage {
-                        Text(error)
-                            .foregroundColor(.red)
-                            .font(.caption)
-                            .multilineTextAlignment(.center)
-                            .padding(.top, 4)
-                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 240)
+                    .padding(.top, 16)
+                    .background(Color.secondary)
+                    .border(Color.gray.opacity(0.3), width: 1).contrast(0.8).cornerRadius(16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-                .padding(.horizontal)
-                
-                Button(action: { showRecover = true }) {
-                    Text("Esqueci a senha?")
-                        .font(.footnote)
-                        .foregroundColor(.blue)
-                }
-                .sheet(isPresented: $showRecover) {
-                    RecoverPasswordView()
-                }
-
-                Spacer()
-
-                ZStack {
-                    Color.blue.ignoresSafeArea(edges: .bottom)
-                    HStack {
-                        Text("Bem-vindo ao aplicativo")
-                            .foregroundColor(.white)
-                            .font(.footnote)
-                            .padding()
-                        Spacer()
-                    }
-                }
-                .frame(height: 88)
+                .ignoresSafeArea()
             }
+        }
+        .onAppear {
+            Task { await viewModel.verifyStoredToken() }
+        }
+        // apresenta HomeView quando isAuthenticated == true
+        .fullScreenCover(isPresented: $viewModel.isAuthenticated) {
+            HomeView()
         }
     }
 }
@@ -138,3 +138,4 @@ struct LoginView_Previews: PreviewProvider {
         LoginView()
     }
 }
+

@@ -18,9 +18,19 @@ final class LoginViewModel: ObservableObject {
     
     private let keychainService = "br.tec.wrcode"
     private let keychainAccount = "authToken"
+    private var production = false
+    
+    private var baseURL: URL {
+        URL(string: production ? "https://wrcode.tec.br" : "http://127.0.0.1:8080")!
+    }
     
     private var loginURL: URL {
-        URL(string: "https://wrcode.tec.br/auth/login")!
+        //URL(string: "https://wrcode.tec.br/auth/login")!
+        URL(string: baseURL.absoluteString + "/auth/login")!
+    }
+    
+    private var tokenURL: URL {
+        URL(string: baseURL.absoluteString + "/auth/check")!
     }
     
     // Validações
@@ -101,4 +111,53 @@ final class LoginViewModel: ObservableObject {
         email = ""
         password = ""
     }
+    
+    func verifyStoredToken() async {
+        // Verifica se há token armazenado
+        guard let token = getStoredToken() else {
+            // Sem token armazenado: marca como não autenticado
+            DispatchQueue.main.async {
+                self.isAuthenticated = false
+                UserDefaults.standard.set(false, forKey: "isAuthenticated")
+            }
+          
+            return
+        }
+
+        // Opcional: aqui poderíamos validar localmente caso fosse JWT (código comentado abaixo)
+        let serverOk = await validateTokenWithServer(token)
+        if serverOk {
+            DispatchQueue.main.async {
+                self.isAuthenticated = true
+                UserDefaults.standard.set(true, forKey: "isAuthenticated")
+            }
+            return
+        } else {
+            // Token inválido no servidor -> remover e marcar como não autenticado
+            KeychainHelper.standard.delete(service: keychainService, account: keychainAccount)
+            DispatchQueue.main.async {
+                self.isAuthenticated = false
+                UserDefaults.standard.set(false, forKey: "isAuthenticated")
+            }
+        }
+    }
+    
+    // Validação via servidor (endpoint de verificação)
+    func validateTokenWithServer(_ token: String) async -> Bool {
+        //guard let url = URL(string: tokeUrl) else { return false }
+        var req = URLRequest(url: tokenURL)
+        req.httpMethod = "GET"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        do {
+            let (_, resp) = try await URLSession.shared.data(for: req)
+            if let http = resp as? HTTPURLResponse {
+                return http.statusCode == 200
+            }
+        } catch {
+            return false
+        }
+        return false
+    }
 }
+
+
