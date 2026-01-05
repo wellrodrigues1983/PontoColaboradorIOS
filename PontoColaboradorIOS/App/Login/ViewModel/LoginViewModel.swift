@@ -92,7 +92,7 @@ final class LoginViewModel: ObservableObject {
                 isAuthenticated = true
             } else {
                 let text = String(data: data, encoding: .utf8) ?? ""
-                errorMessage = "Header Authorization não encontrado. Resposta: \(text)"
+                errorMessage = "Não foi possivel realizar o Login. Resposta: \(text)"
             }
         } catch {
             errorMessage = error.localizedDescription
