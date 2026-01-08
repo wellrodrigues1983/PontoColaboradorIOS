@@ -7,6 +7,7 @@
 // swift
 import Foundation
 import Combine
+import CoreData
 
 @MainActor
 final class LoginViewModel: ObservableObject {
@@ -19,18 +20,37 @@ final class LoginViewModel: ObservableObject {
     private let keychainService = "br.tec.wrcode"
     private let keychainAccount = "authToken"
     private var production = false
+    private var app: ConfigApp?
     
-    private var baseURL: URL {
-        URL(string: production ? "https://wrcode.tec.br" : "http://127.0.0.1:8080")!
+
+    let container: NSPersistentContainer
+    private let persistence = PersistenceController.shared
+    @Published var currentUser: CurrentUserEntity? = nil
+    
+    init(){
+        container = NSPersistentContainer(name: "PontoColaboradorIOS")
+        container.loadPersistentStores { (_, error) in
+            if let error = error {
+                fatalError("Unresolved error \(error), \(error.localizedDescription)")
+            }
+        }
+        do {
+            let request: NSFetchRequest<CurrentUserEntity> = CurrentUserEntity.fetchRequest()
+            request.fetchLimit = 1
+            self.currentUser = try container.viewContext.fetch(request).first
+        } catch {
+            self.currentUser = nil
+        }
+        
+        app = ConfigApp()
     }
     
     private var loginURL: URL {
-        //URL(string: "https://wrcode.tec.br/auth/login")!
-        URL(string: baseURL.absoluteString + "/auth/login")!
+        URL(string: (app?.baseURL.absoluteString)! + "/auth/login")!
     }
     
     private var tokenURL: URL {
-        URL(string: baseURL.absoluteString + "/auth/check")!
+        URL(string: (app?.baseURL.absoluteString)! + "/auth/check")!
     }
     
     // Validações
@@ -82,6 +102,9 @@ final class LoginViewModel: ObservableObject {
             
             if let authHeader = httpResponse.allHeaderFields["Authorization"] as? String {
                 let saved = KeychainHelper.standard.save(authHeader, service: keychainService, account: keychainAccount)
+                
+                saveCurrentUser(email: email.trimmed)
+                
                 if !saved {
                     errorMessage = "Não foi possível salvar o token."
                     return
@@ -158,6 +181,89 @@ final class LoginViewModel: ObservableObject {
         }
         return false
     }
-}
+    
+    func saveCurrentUser(email: String) {
+        let ctx = persistence.container.newBackgroundContext()
+        ctx.perform {
+            // If you want only one CurrentUserEntity, clear existing ones first
+            let fetch: NSFetchRequest<NSFetchRequestResult> = CurrentUserEntity.fetchRequest()
+            let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetch)
+            do {
+                try ctx.execute(deleteRequest)
+            } catch {
+                // Ignore if no records; proceed to create a new one
+            }
 
+            let user = CurrentUserEntity(context: ctx)
+            user.email = email
+            do {
+                try ctx.save()
+                // Refresh currentUser on main context
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    do {
+                        let request: NSFetchRequest<CurrentUserEntity> = CurrentUserEntity.fetchRequest()
+                        request.fetchLimit = 1
+                        self.currentUser = try self.container.viewContext.fetch(request).first
+                    } catch {
+                        self.currentUser = nil
+                    }
+                }
+            } catch {
+                // Optionally publish an error
+                DispatchQueue.main.async { [weak self] in
+                    self?.errorMessage = "Falha ao salvar usuário: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    func fetchCurrentUsers() -> [CurrentUserEntity] {
+        let request: NSFetchRequest<CurrentUserEntity> = CurrentUserEntity.fetchRequest()
+        do {
+            return try container.viewContext.fetch(request)
+        } catch {
+            self.errorMessage = "Falha ao listar usuários: \(error.localizedDescription)"
+            return []
+        }
+    }
+
+    func fetchCurrentUser(byEmail email: String) -> CurrentUserEntity? {
+        let request: NSFetchRequest<CurrentUserEntity> = CurrentUserEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "email ==[c] %@", email)
+        request.fetchLimit = 1
+        do {
+            return try container.viewContext.fetch(request).first
+        } catch {
+            self.errorMessage = "Falha ao buscar usuário: \(error.localizedDescription)"
+            return nil
+        }
+    }
+
+    func deleteCurrentUser(_ user: CurrentUserEntity) {
+        let ctx = container.viewContext
+        ctx.delete(user)
+        do {
+            try ctx.save()
+            // Update published state
+            if self.currentUser == user {
+                self.currentUser = nil
+            }
+        } catch {
+            self.errorMessage = "Falha ao deletar usuário: \(error.localizedDescription)"
+        }
+    }
+    func deleteAllCurrentUsers() {
+        let ctx = container.viewContext
+        let fetch: NSFetchRequest<NSFetchRequestResult> = CurrentUserEntity.fetchRequest()
+        let request = NSBatchDeleteRequest(fetchRequest: fetch)
+        do {
+            try ctx.execute(request)
+            try ctx.save()
+            self.currentUser = nil
+        } catch {
+            self.errorMessage = "Falha ao deletar todos os usuários: \(error.localizedDescription)"
+        }
+    }
+}
 
