@@ -15,6 +15,7 @@ final class HomeViewModel: ObservableObject {
     @Published var pontos: [RegistroEntity] = []
     @Published var tipo: Bool = false
     @Published var successMessage: String? = nil
+    @Published var errorQuantidade: Bool = false
 
     @AppStorage("isAuthenticated") var isAuthenticated: Bool = false
 
@@ -79,6 +80,11 @@ final class HomeViewModel: ObservableObject {
         let quantidadeHoje: Int
         do {
             quantidadeHoje = try countRegistrosNoDia(data: agora)
+            if quantidadeHoje > 3 {
+                errorQuantidade = true
+                print("Não é possível registrar mais de 4 pontos por dia.")
+                return false
+            }
         } catch {
             print("Erro ao contar registros do dia: \(error)")
             return false

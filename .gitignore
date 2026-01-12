@@ -60,3 +60,13 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+.DS_Store
+.DS_Store
+PontoColaboradorIOS/.DS_Store
+PontoColaboradorIOS/App/.DS_Store
+PontoColaboradorIOS/App/Login/.DS_Store
+PontoColaboradorIOS/Assets.xcassets/brainPontoLogo.imageset/Contents.json
+PontoColaboradorIOS/PontoColaboradorIOS.xcdatamodeld/PontoColaboradorIOS.xcdatamodel/contents
+PontoColaboradorIOS.xcodeproj/project.pbxproj
+PontoColaboradorIOS/.DS_Store
+PontoColaboradorIOS/App/.DS_Store
