@@ -42,6 +42,7 @@ struct AnalogClockView: View {
                 
             }
             .frame(width: geo.size.width, height: geo.size.height)
+            .padding(.top, 32)
             
             
         }

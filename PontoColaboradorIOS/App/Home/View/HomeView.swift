@@ -6,10 +6,16 @@
 //
 
 import SwiftUI
+import Combine
 
 struct HomeView: View {
-    var onAction: () -> Void = { print("Ação do botão executada") }
-
+    
+    @StateObject private var viewModel = HomeViewModel()
+    @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
+    @State private var showSuccessAlert: Bool = false
+    
+    var onAction: (() -> Void)?
+    
     var body: some View {
         TabView {
             NavigationView {
@@ -17,9 +23,19 @@ struct HomeView: View {
                 VStack(alignment: .center, spacing: 16) {
                     AnalogClockView()
                     DigitalClockView()
-                    Button(action: onAction) {
+                    Button(
+                        action: {
+                            let success = viewModel.savePonto()
+                            if success {
+                                showSuccessAlert = true
+                            } else {
+                                isAuthenticated = false
+                            }
+                        }
+                    ) {
                         Text("Registrar Ponto")
                             .font(.headline)
+                            .fontWeight(.semibold)
                             .foregroundColor(.white)
                             .padding()
                             .frame(maxWidth: 220)
@@ -27,11 +43,19 @@ struct HomeView: View {
                             .cornerRadius(12)
                     }
                     .accessibilityIdentifier("actionButton")
+                    .alert(isPresented: $showSuccessAlert) {
+                        Alert(
+                            title: Text("Sucesso"),
+                            message: Text("Ponto registrado com sucesso!"),
+                            dismissButton: .default(Text("OK"))
+                        )
+                    }
                     
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding()
+                .ignoresSafeArea()
                 
             }
             .tabItem {

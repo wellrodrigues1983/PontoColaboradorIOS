@@ -48,6 +48,7 @@ struct LoginView: View {
                             .foregroundColor(.gray)
                         TextField("Matrícula ou E-mail", text: $viewModel.email)
                             .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
                     }
                     .padding()
                     .background(Color(red: 0.93, green: 0.93, blue: 0.93))

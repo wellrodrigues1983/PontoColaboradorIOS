@@ -4,10 +4,11 @@
 //
 //  Created by Wellington Rodrigues on 16/12/25.
 //
-// swift
+
 import Foundation
 import Combine
-import CoreData
+internal import CoreData
+import SwiftUI
 
 @MainActor
 final class LoginViewModel: ObservableObject {
@@ -15,7 +16,8 @@ final class LoginViewModel: ObservableObject {
     @Published var password: String = ""
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
-    @Published var isAuthenticated: Bool = false
+    //@Published var isAuthenticated: Bool = false
+    @AppStorage("isAuthenticated") var isAuthenticated: Bool = false
     
     private let keychainService = "br.tec.wrcode"
     private let keychainAccount = "authToken"
@@ -23,26 +25,24 @@ final class LoginViewModel: ObservableObject {
     private var app: ConfigApp?
     
 
-    let container: NSPersistentContainer
     private let persistence = PersistenceController.shared
     @Published var currentUser: CurrentUserEntity? = nil
     
     init(){
-        container = NSPersistentContainer(name: "PontoColaboradorIOS")
-        container.loadPersistentStores { (_, error) in
-            if let error = error {
-                fatalError("Unresolved error \(error), \(error.localizedDescription)")
-            }
-        }
         do {
             let request: NSFetchRequest<CurrentUserEntity> = CurrentUserEntity.fetchRequest()
             request.fetchLimit = 1
-            self.currentUser = try container.viewContext.fetch(request).first
+            self.currentUser = try persistence.container.viewContext.fetch(request).first
         } catch {
             self.currentUser = nil
         }
         
         app = ConfigApp()
+        
+        // Valida a autenticação automaticamente ao inicializar
+        Task {
+            await verifyStoredToken()
+        }
     }
     
     private var loginURL: URL {
@@ -139,10 +139,11 @@ final class LoginViewModel: ObservableObject {
         // Verifica se há token armazenado
         guard let token = getStoredToken() else {
             // Sem token armazenado: marca como não autenticado
-            DispatchQueue.main.async {
-                self.isAuthenticated = false
-                UserDefaults.standard.set(false, forKey: "isAuthenticated")
-            }
+//            DispatchQueue.main.async {
+//                self.isAuthenticated = false
+//                UserDefaults.standard.set(false, forKey: "isAuthenticated")
+//            }
+            isAuthenticated = false
           
             return
         }
@@ -150,18 +151,16 @@ final class LoginViewModel: ObservableObject {
         // Opcional: aqui poderíamos validar localmente caso fosse JWT (código comentado abaixo)
         let serverOk = await validateTokenWithServer(token)
         if serverOk {
-            DispatchQueue.main.async {
-                self.isAuthenticated = true
-                UserDefaults.standard.set(true, forKey: "isAuthenticated")
-            }
+            isAuthenticated = true
             return
         } else {
             // Token inválido no servidor -> remover e marcar como não autenticado
             KeychainHelper.standard.delete(service: keychainService, account: keychainAccount)
-            DispatchQueue.main.async {
-                self.isAuthenticated = false
-                UserDefaults.standard.set(false, forKey: "isAuthenticated")
-            }
+//            DispatchQueue.main.async {
+//                self.isAuthenticated = false
+//                UserDefaults.standard.set(false, forKey: "isAuthenticated")
+//            }
+            isAuthenticated = false
         }
     }
     
@@ -185,32 +184,30 @@ final class LoginViewModel: ObservableObject {
     func saveCurrentUser(email: String) {
         let ctx = persistence.container.newBackgroundContext()
         ctx.perform {
-            // If you want only one CurrentUserEntity, clear existing ones first
+            
             let fetch: NSFetchRequest<NSFetchRequestResult> = CurrentUserEntity.fetchRequest()
             let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetch)
             do {
                 try ctx.execute(deleteRequest)
             } catch {
-                // Ignore if no records; proceed to create a new one
+                
             }
 
             let user = CurrentUserEntity(context: ctx)
             user.email = email
             do {
                 try ctx.save()
-                // Refresh currentUser on main context
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
                     do {
                         let request: NSFetchRequest<CurrentUserEntity> = CurrentUserEntity.fetchRequest()
                         request.fetchLimit = 1
-                        self.currentUser = try self.container.viewContext.fetch(request).first
+                        self.currentUser = try self.persistence.container.viewContext.fetch(request).first
                     } catch {
                         self.currentUser = nil
                     }
                 }
             } catch {
-                // Optionally publish an error
                 DispatchQueue.main.async { [weak self] in
                     self?.errorMessage = "Falha ao salvar usuário: \(error.localizedDescription)"
                 }
@@ -221,7 +218,7 @@ final class LoginViewModel: ObservableObject {
     func fetchCurrentUsers() -> [CurrentUserEntity] {
         let request: NSFetchRequest<CurrentUserEntity> = CurrentUserEntity.fetchRequest()
         do {
-            return try container.viewContext.fetch(request)
+            return try persistence.container.viewContext.fetch(request)
         } catch {
             self.errorMessage = "Falha ao listar usuários: \(error.localizedDescription)"
             return []
@@ -233,7 +230,7 @@ final class LoginViewModel: ObservableObject {
         request.predicate = NSPredicate(format: "email ==[c] %@", email)
         request.fetchLimit = 1
         do {
-            return try container.viewContext.fetch(request).first
+            return try persistence.container.viewContext.fetch(request).first
         } catch {
             self.errorMessage = "Falha ao buscar usuário: \(error.localizedDescription)"
             return nil
@@ -241,11 +238,10 @@ final class LoginViewModel: ObservableObject {
     }
 
     func deleteCurrentUser(_ user: CurrentUserEntity) {
-        let ctx = container.viewContext
+        let ctx = persistence.container.viewContext
         ctx.delete(user)
         do {
             try ctx.save()
-            // Update published state
             if self.currentUser == user {
                 self.currentUser = nil
             }
@@ -254,7 +250,7 @@ final class LoginViewModel: ObservableObject {
         }
     }
     func deleteAllCurrentUsers() {
-        let ctx = container.viewContext
+        let ctx = persistence.container.viewContext
         let fetch: NSFetchRequest<NSFetchRequestResult> = CurrentUserEntity.fetchRequest()
         let request = NSBatchDeleteRequest(fetchRequest: fetch)
         do {
@@ -266,4 +262,3 @@ final class LoginViewModel: ObservableObject {
         }
     }
 }
-

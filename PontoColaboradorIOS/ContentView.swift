@@ -5,60 +5,65 @@
 //  Created by Wellington Rodrigues on 16/12/25.
 //
 
-// swift
 import SwiftUI
-import CoreData
+internal import CoreData
 
 struct ContentView: View {
-    var body: some View {
-    }
-    
-//    @Environment(\.managedObjectContext) private var viewContext
-//
-//    @FetchRequest(
-//        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-//        animation: .default)
-//    private var items: FetchedResults<Item>
-//
-//    @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
-//    @State private var showLogin: Bool = false
+    let persistenceController = PersistenceController.shared
+    @State private var isLoggedIn: Bool?
 
-//    var body: some View {
-//        NavigationView {
-//            NavigationLink(destination: LoginView()) {
-//                Text("Login")
-//            }
-//            VStack {
-//                // Conteúdo da tela inicial quando autenticado
-//                Text("Tela inicial do app")
-//                    .font(.title)
-//                    .padding()
-//
-//                // Exemplo de lista usando CoreData (se desejar)
-//                List {
-//                    ForEach(items) { item in
-//                        Text(item.timestamp ?? Date(), style: .date)
-//                    }
-//                }
-//            }
-//            .navigationTitle("Início")
-//        }
-//        .onAppear {
-//            // Sincroniza estado inicial com token no Keychain e com o AppStorage
-//            let token = KeychainHelper.standard.readString(service: "br.tec.wrcode", account: "authToken")
-//            isAuthenticated = (token != nil)
-//            showLogin = !isAuthenticated
-//        }
-//        .onChange(of: isAuthenticated) { newValue in
-//            // Quando autenticação mudar, atualiza apresentação do Login
-//            showLogin = !newValue
-//        }
-//        .fullScreenCover(isPresented: $showLogin) {
-//            LoginView()
-//        }
-//    }
+    var body: some View {
+        Group {
+            if let isLoggedIn = isLoggedIn {
+                if isLoggedIn {
+                    HomeView()
+                        .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                } else {
+                    LoginView()
+                        .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                }
+            } else {
+                LoginView()
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            }
+        }
+        .onAppear {
+            Task {
+                await checkAuthentication()
+            }
+        }
+    }
+
+    private func checkAuthentication() async {
+        let keychainService = "br.tec.wrcode"
+        let keychainAccount = "authToken"
+        guard let token = KeychainHelper.standard.readString(service: keychainService, account: keychainAccount) else {
+            isLoggedIn = false
+            return
+        }
+        let isValid = await validateToken(token)
+        isLoggedIn = isValid
+    }
+
+    private func validateToken(_ token: String) async -> Bool {
+        let tokenURL = URL(string: "https://your-api-url/auth/check")! // Substitua pela URL real
+        var req = URLRequest(url: tokenURL)
+        req.httpMethod = "GET"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        do {
+            let (_, resp) = try await URLSession.shared.data(for: req)
+            if let http = resp as? HTTPURLResponse {
+                return http.statusCode == 200
+            }
+        } catch {
+            return false
+        }
+        return false
+    }
 }
 
-#Preview {
-//    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }

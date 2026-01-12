@@ -5,19 +5,19 @@
 //  Created by Wellington Rodrigues on 16/12/25.
 //
 
-import CoreData
+internal import CoreData
 
 struct PersistenceController {
     static let shared = PersistenceController()
 
     @MainActor
     static let preview: PersistenceController = {
-        let result = PersistenceController(inMemory: true)
+        let result = PersistenceController(inMemory: false)
         let viewContext = result.container.viewContext
-        for _ in 0..<10 {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-        }
+//        for _ in 0..<10 {
+//            let newItem = Item(context: viewContext)
+//            newItem.timestamp = Date()
+//        }
         do {
             try viewContext.save()
         } catch {
@@ -53,5 +53,8 @@ struct PersistenceController {
             }
         })
         container.viewContext.automaticallyMergesChangesFromParent = true
+        
+        print(FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!)
+
     }
 }

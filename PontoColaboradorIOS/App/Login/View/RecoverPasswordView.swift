@@ -19,12 +19,17 @@ struct RecoverPasswordView: View {
                     .fontWeight(.semibold)
                     .padding(.top)
 
-                TextField("Email", text: $viewModel.email)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                TextField("Email", text: Binding(
+                    get: { viewModel.email.lowercased() },
+                    set: { viewModel.email = $0.lowercased() }
+                ))
+                .keyboardType(.emailAddress)
+                .autocapitalization(.none)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
 
                 if let msg = viewModel.emailValidationMessage {
                     Text(msg)

@@ -32,8 +32,9 @@ struct DigitalClockView: View {
                 .foregroundColor(.primary)
 
             Text(Self.dateFormatter.string(from: now))
-                .font(.system(size: 18, weight: .regular, design: .rounded))
-                .foregroundColor(.secondary)
+                .font(.system(size: 24, weight: .regular, design: .rounded))
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
         }
         .onReceive(timer) { input in
             now = input
