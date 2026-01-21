@@ -8,11 +8,16 @@
 import SwiftUI
 
 struct LoginView: View {
+    //MARK: - PROPERTIES
     @StateObject private var viewModel = LoginViewModel()
     @State private var isSecured: Bool = true
-    @Environment(\.managedObjectContext) private var viewContext
     
-    @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
+    var isAuthenticated: Binding<Bool> {
+        Binding<Bool>(
+            get: { viewModel.isAuthenticated ?? false },
+            set: { viewModel.isAuthenticated = $0 }
+        )
+    }
     
     var body: some View {
         ZStack {
@@ -45,7 +50,9 @@ struct LoginView: View {
                 VStack(spacing: 15) {
                     HStack {
                         Image(systemName: "person.fill")
+                        //MARK: - Email/Matrícula Field
                             .foregroundColor(.gray)
+                        
                         TextField("Matrícula ou E-mail", text: $viewModel.email)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
@@ -55,6 +62,7 @@ struct LoginView: View {
                     .cornerRadius(10)
                     
                     HStack {
+                        //MARK: - Password Field with Show/Hide Toggle
                         Image(systemName: "lock.fill")
                             .foregroundColor(.gray)
                         if isSecured {
@@ -76,6 +84,7 @@ struct LoginView: View {
                 
                 HStack {
                     Spacer()
+                    //MARK: - Forgot Password Button
                     Button(action: {
                         //TODO : Implement forgot password action
                     }) {
@@ -84,21 +93,31 @@ struct LoginView: View {
                             .foregroundColor(Color(red: 255/255, green: 220/255, blue: 193/255))
                     }
                 }
-                
+                //MARK: - Login Button
                 // Login Button
                 Button(action: {
-                    Task { await viewModel.login() }
+                    //Task { await viewModel.login() }
+                    Task { await viewModel.doLogin() }
                 }) {
-                    Text("ENTRAR")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(red: 0.1, green: 0.4, blue: 0.7)) // Match blue color
-                        .cornerRadius(25)
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(red: 0.1, green: 0.4, blue: 0.7)) // Match blue color
+                            .cornerRadius(25)
+                    } else {
+                        Text("ENTRAR")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(red: 0.1, green: 0.4, blue: 0.7)) // Match blue color
+                            .cornerRadius(25)
+                    }
                 }
                 .padding(.top, 20)
                 
+                //MARK: - Alternative Login Options
                 // Face ID Button
                 Button(action: {
                     // TODO : Implement Face ID login action
@@ -115,13 +134,14 @@ struct LoginView: View {
                 Spacer()
             }
             .padding(30)
-            
-        }.onAppear {
-            Task { await viewModel.verifyStoredToken()}
-        }.fullScreenCover(isPresented: $viewModel.isAuthenticated) {
+            //MARK: - Full Screen Cover
+        }.fullScreenCover(isPresented: isAuthenticated) {
             HomeView()
         }
+
     }
+    
+    
 }
 
 

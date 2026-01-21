@@ -10,7 +10,10 @@ internal import CoreData
 
 struct ContentView: View {
     let persistenceController = PersistenceController.shared
-    @State private var isLoggedIn: Bool?
+    //@State private var isLoggedIn: Bool?
+    @AppStorage("isAuthenticated") var isLoggedIn: Bool?
+    @AppStorage("token") var token: String = ""
+    var service = HttpServices()
 
     var body: some View {
         Group {
@@ -35,31 +38,35 @@ struct ContentView: View {
     }
 
     private func checkAuthentication() async {
-        let keychainService = "br.tec.wrcode"
-        let keychainAccount = "authToken"
-        guard let token = KeychainHelper.standard.readString(service: keychainService, account: keychainAccount) else {
-            isLoggedIn = false
-            return
-        }
-        let isValid = await validateToken(token)
+        
+        let service = HttpServices()
+        
+//        let keychainService = "br.tec.wrcode"
+//        let keychainAccount = "authToken"
+//        guard let token = KeychainHelper.standard.readString(service: keychainService, account: keychainAccount) else {
+//            isLoggedIn = false
+//            return
+//        }
+        let isValid = await service.validateToken(token)
         isLoggedIn = isValid
+        print("Token valid: \(self.isLoggedIn)")
     }
 
-    private func validateToken(_ token: String) async -> Bool {
-        let tokenURL = URL(string: "https://your-api-url/auth/check")! // Substitua pela URL real
-        var req = URLRequest(url: tokenURL)
-        req.httpMethod = "GET"
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        do {
-            let (_, resp) = try await URLSession.shared.data(for: req)
-            if let http = resp as? HTTPURLResponse {
-                return http.statusCode == 200
-            }
-        } catch {
-            return false
-        }
-        return false
-    }
+//    private func validateToken(_ token: String) async -> Bool {
+//        let tokenURL = URL(string: "https://your-api-url/auth/check")! // Substitua pela URL real
+//        var req = URLRequest(url: tokenURL)
+//        req.httpMethod = "GET"
+//        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+//        do {
+//            let (_, resp) = try await URLSession.shared.data(for: req)
+//            if let http = resp as? HTTPURLResponse {
+//                return http.statusCode == 200
+//            }
+//        } catch {
+//            return false
+//        }
+//        return false
+//    }
 }
 
 struct ContentView_Previews: PreviewProvider {

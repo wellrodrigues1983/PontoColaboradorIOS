@@ -11,15 +11,12 @@ import Combine
 struct HomeView: View {
 
     @StateObject private var viewModel = HomeViewModel()
-    @AppStorage("isAuthenticated") private var isAuthenticated: Bool = false
-    @State private var showSuccessAlert: Bool = false
-    @State private var showLimitAlert: Bool = false
 
     var onAction: (() -> Void)?
 
     var body: some View {
         TabView {
-            HomeTabView(viewModel: viewModel, isAuthenticated: $isAuthenticated, showSuccessAlert: $showSuccessAlert, showLimitAlert: $showLimitAlert)
+            HomeTabView(viewModel: viewModel)
                 .tabItem {
                     Image(systemName: "house.fill")
                     Text("Home")
@@ -42,59 +39,56 @@ struct HomeView: View {
 
 struct HomeTabView: View {
     @ObservedObject var viewModel: HomeViewModel
-    @Binding var isAuthenticated: Bool
-    @Binding var showSuccessAlert: Bool
-    @Binding var showLimitAlert: Bool
-
+    
+    @AppStorage("name") var name: String?
+    @AppStorage("photo") var photo: String?
+    
+    
+    var showAlert: Binding<Bool> {
+        Binding<Bool>(
+            get: { viewModel.showAlert },
+            set: { viewModel.showAlert = $0 }
+        )
+    }
+    
     var body: some View {
         NavigationView {
+            
             VStack(alignment: .center, spacing: 16) {
+                Spacer()
+                UserInfoView()
                 AnalogClockView()
                 DigitalClockView()
-                ActionButtonView(viewModel: viewModel, isAuthenticated: $isAuthenticated, showSuccessAlert: $showSuccessAlert, showLimitAlert: $showLimitAlert)
+                ActionButtonView(viewModel: viewModel)
                 Spacer()
-                RecordsScrollView(viewModel: viewModel, showLimitAlert: $showLimitAlert)
+                RecordsScrollView(viewModel: viewModel)
+                Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding()
             .padding(.bottom, 50)
             .ignoresSafeArea()
-            .alert(isPresented: $showSuccessAlert) {
-                Alert(
-                    title: Text("Sucesso"),
-                    message: Text("Ponto registrado com sucesso!"),
-                    dismissButton: .default(Text("OK"))
-                )
-               
+            .alert(isPresented: showAlert) {
+                ShowAlert(message: viewModel.alertMessage ?? "Mesage", title: viewModel.alertTitle ?? "Title")
             }
-
-        }.alert(isPresented: $showLimitAlert){
-            Alert(
-                title: Text("Limite de Registros"),
-                message: Text("Você atingiu o limite de registros para hoje."),
+        }
+    }
+    
+    func ShowAlert(message: String, title: String) -> Alert {
+            return Alert(
+                title: Text(title),
+                message: Text(message),
                 dismissButton: .default(Text("OK"))
             )
         }
-    }
 }
 
 struct ActionButtonView: View {
     @ObservedObject var viewModel: HomeViewModel
-    @Binding var isAuthenticated: Bool
-    @Binding var showSuccessAlert: Bool
-    @Binding var showLimitAlert: Bool
-
     var body: some View {
         Button(
             action: {
-                let success = viewModel.savePonto()
-                if success {
-                    showSuccessAlert = true
-                } else if viewModel.errorQuantidade {
-                    showLimitAlert = true
-                } else {
-                    isAuthenticated = false
-                }
+                viewModel.savePonto()
             }
         ) {
             Text("Registrar Ponto")
@@ -112,7 +106,6 @@ struct ActionButtonView: View {
 
 struct RecordsScrollView: View {
     @ObservedObject var viewModel: HomeViewModel
-    @Binding var showLimitAlert: Bool
 
     var body: some View {
         ScrollView {
@@ -172,9 +165,30 @@ struct TasksTabView: View {
     }
 }
 
+struct UserInfoView: View {
+    @AppStorage("name") var name: String?
+    @AppStorage("photo") var photo: String?
+    
+    var body: some View {
+        HStack {
+            Text("\(name ?? "Usuário")")
+                .font(.system(size: 12, design: .default))
+                .foregroundColor(.primary)
+            Image(systemName: "person.circle.fill")
+                .resizable()
+                .frame(width: 32, height: 32)
+                .foregroundColor(.primary)
+            
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding()
+    }
+}
+
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         HomeView()
     }
 }
+

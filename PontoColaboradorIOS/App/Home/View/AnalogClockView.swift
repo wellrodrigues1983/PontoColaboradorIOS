@@ -11,11 +11,16 @@ import Combine
 struct AnalogClockView: View {
     @State private var now = Date()
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    
+    @AppStorage("name") var name: String?
+    @AppStorage("photo") var photo: String?
 
     var body: some View {
+        
         GeometryReader { geo in
             let size = min(geo.size.width, geo.size.height)
             ZStack {
+                
                 Circle()
                     .fill(Color(UIColor.systemBackground))
                 Circle()
@@ -38,11 +43,11 @@ struct AnalogClockView: View {
 
                 Circle()
                     .fill(Color.primary)
-                    .frame(width: size * 0.05, height: size * 0.05)
+                    .frame(width: size * 0.05, height: size * 0.05)             
                 
             }
             .frame(width: geo.size.width, height: geo.size.height)
-            .padding(.top, 32)
+            //.padding(.top, 32)
             
             
         }

@@ -12,16 +12,20 @@ import SwiftUI
 
 final class HomeViewModel: ObservableObject {
 
+    //Mark: - PROPERTIES
     @Published var pontos: [RegistroEntity] = []
     @Published var tipo: Bool = false
     @Published var successMessage: String? = nil
     @Published var errorQuantidade: Bool = false
+    @Published var showAlert: Bool = false
+    @Published var alertMessage: String? = nil
+    @Published var alertTitle: String? = nil
+    
+    @AppStorage("email") var email: String?
 
-    @AppStorage("isAuthenticated") var isAuthenticated: Bool = false
+    @AppStorage("isAuthenticated") var isAuthenticated: Bool?
 
     private let persistence = PersistenceController.shared
-    private let keychainService = "br.tec.wrcode"
-    private let keychainAccount = "authToken"
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -39,8 +43,9 @@ final class HomeViewModel: ObservableObject {
         return formatter
     }()
 
+    //MARK: - INICIALIZADOR
     init(){
-        self.pontos = (try? self.persistence.container.viewContext.fetch(RegistroEntity.fetchRequest())) ?? []
+        self.pontos = (try? self.persistence.container.viewContext.fetch(RegistroEntity.fetchRequest())) ?? []              
     }
 
     func getPontos() -> [RegistroEntity] {
@@ -81,31 +86,25 @@ final class HomeViewModel: ObservableObject {
         do {
             quantidadeHoje = try countRegistrosNoDia(data: agora)
             if quantidadeHoje > 3 {
-                errorQuantidade = true
-                print("Não é possível registrar mais de 4 pontos por dia.")
+                //errorQuantidade = true
+                self.showAlert = true
+                self.alertMessage = "Limite diário de 4 pontos atingido."
+                self.alertTitle = "Atenção"
+                
+                //print("Não é possível registrar mais de 4 pontos por dia.")
                 return false
             }
         } catch {
             print("Erro ao contar registros do dia: \(error)")
             return false
         }
-
-        // Busca o usuário atual
-        let request: NSFetchRequest<CurrentUserEntity> = CurrentUserEntity.fetchRequest()
-        request.fetchLimit = 1
-        guard let currentUser = try? contexto.fetch(request).first else {
-            isAuthenticated = false
-            KeychainHelper.standard.delete(service: keychainService, account: keychainAccount)  // Deleta token para forçar logout
-            print("Erro: Nenhum usuário atual encontrado")
-            return false
-        }
-
+  
         let ordemDoDia = quantidadeHoje + 1
 
         let novoPonto = RegistroEntity(context: contexto)
         novoPonto.data = Self.dateFormatter.string(from: agora)  // Define a data atual como String
         novoPonto.hora = Self.timeFormatter.string(from: agora)  // Define a hora atual como String
-        novoPonto.email = currentUser.email  // Define o email do usuário atual
+        novoPonto.email = self.email  // Define o email do usuário atual
 
         if let attr = novoPonto.entity.attributesByName["ordemDoDia"], attr.attributeType == .integer16AttributeType {
             novoPonto.setValue(Int16(ordemDoDia), forKey: "ordemDoDia")
@@ -114,7 +113,10 @@ final class HomeViewModel: ObservableObject {
         do {
             try contexto.save()
             self.pontos = (try? contexto.fetch(RegistroEntity.fetchRequest())) ?? []
-            self.successMessage = "Ponto registrado com sucesso!"
+            //self.successMessage = "Ponto registrado com sucesso!"
+            self.showAlert = true
+            self.alertTitle = "Sucesso"
+            self.alertMessage = "Ponto registrado com sucesso!"
             return true
         } catch {
             print("Erro ao salvar ponto: \(error)")
@@ -123,7 +125,4 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    func getStoredToken() -> String? {
-        KeychainHelper.standard.readString(service: keychainService, account: keychainAccount)
-    }
 }
