@@ -24,6 +24,7 @@ final class HomeViewModel: ObservableObject {
     @AppStorage("email") var email: String?
 
     @AppStorage("isAuthenticated") var isAuthenticated: Bool?
+    @AppStorage("token") var token: String?
 
     private let persistence = PersistenceController.shared
 
@@ -45,7 +46,8 @@ final class HomeViewModel: ObservableObject {
 
     //MARK: - INICIALIZADOR
     init(){
-        self.pontos = (try? self.persistence.container.viewContext.fetch(RegistroEntity.fetchRequest())) ?? []              
+        self.pontos = (try? self.persistence.container.viewContext.fetch(RegistroEntity.fetchRequest())) ?? []
+        
     }
 
     func getPontos() -> [RegistroEntity] {
@@ -112,8 +114,7 @@ final class HomeViewModel: ObservableObject {
 
         do {
             try contexto.save()
-            self.pontos = (try? contexto.fetch(RegistroEntity.fetchRequest())) ?? []
-            //self.successMessage = "Ponto registrado com sucesso!"
+            fechPontos()
             self.showAlert = true
             self.alertTitle = "Sucesso"
             self.alertMessage = "Ponto registrado com sucesso!"
@@ -123,6 +124,19 @@ final class HomeViewModel: ObservableObject {
             contexto.rollback()
             return false
         }
+    }
+    
+    func fechPontos(){
+            let contexto = persistence.container.viewContext
+            let request = RegistroEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "data == %@", Self.dateFormatter.string(from: Date()))
+            self.pontos = (try? contexto.fetch(request)) ?? []
+        }
+    
+    func logout() {
+        self.isAuthenticated = false
+        self.email = nil
+        self.token = nil
     }
 
 }

@@ -33,6 +33,9 @@ struct HomeView: View {
                     Image(systemName: "checklist")
                     Text("Tarefas")
                 }
+        }.onAppear {
+            viewModel.pontos.removeAll()
+            viewModel.fechPontos()
         }
     }
 }
@@ -56,7 +59,7 @@ struct HomeTabView: View {
             
             VStack(alignment: .center, spacing: 16) {
                 Spacer()
-                UserInfoView()
+                UserInfoView(viewModel: viewModel)
                 AnalogClockView()
                 DigitalClockView()
                 ActionButtonView(viewModel: viewModel)
@@ -168,20 +171,31 @@ struct TasksTabView: View {
 struct UserInfoView: View {
     @AppStorage("name") var name: String?
     @AppStorage("photo") var photo: String?
+    @ObservedObject var viewModel: HomeViewModel
     
     var body: some View {
-        HStack {
-            Text("\(name ?? "Usuário")")
-                .font(.system(size: 12, design: .default))
-                .foregroundColor(.primary)
-            Image(systemName: "person.circle.fill")
-                .resizable()
-                .frame(width: 32, height: 32)
-                .foregroundColor(.primary)
+        HStack(spacing: 12) {
             
+            Menu {
+                Button(role: .destructive) {
+                    viewModel.logout()
+                } label: {
+                    Label("Sair", systemImage: "arrow.backward.square")
+                }
+            } label: {
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 44, height: 44)
+                    .clipShape(Circle())
+            }
+            
+            Text("\(name ?? "Usuário")")
+                .font(.headline)
+            
+            Spacer()
         }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding()
+        .padding()
     }
 }
 

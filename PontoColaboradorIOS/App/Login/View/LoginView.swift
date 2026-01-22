@@ -56,6 +56,8 @@ struct LoginView: View {
                         TextField("Matrícula ou E-mail", text: $viewModel.email)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
+                            .foregroundColor(.black)
+                            
                     }
                     .padding()
                     .background(Color(red: 0.93, green: 0.93, blue: 0.93))
@@ -66,9 +68,9 @@ struct LoginView: View {
                         Image(systemName: "lock.fill")
                             .foregroundColor(.gray)
                         if isSecured {
-                            SecureField("Senha", text: $viewModel.password)
+                            SecureField("Senha", text: $viewModel.password).foregroundColor(.black)
                         } else {
-                            TextField("Senha", text: $viewModel.password)
+                            TextField("Senha", text: $viewModel.password).foregroundColor(.black)
                         }
                         Button(action: {
                             isSecured.toggle()
