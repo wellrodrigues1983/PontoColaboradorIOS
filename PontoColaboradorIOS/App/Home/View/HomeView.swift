@@ -9,11 +9,11 @@ import SwiftUI
 import Combine
 
 struct HomeView: View {
-
+    
     @StateObject private var viewModel = HomeViewModel()
-
+    
     var onAction: (() -> Void)?
-
+    
     var body: some View {
         TabView {
             HomeTabView(viewModel: viewModel)
@@ -21,13 +21,13 @@ struct HomeView: View {
                     Image(systemName: "house.fill")
                     Text("Home")
                 }
-
+            
             SettingsTabView()
                 .tabItem {
                     Image(systemName: "gearshape.fill")
                     Text("Configurações")
                 }
-
+            
             TasksTabView()
                 .tabItem {
                     Image(systemName: "checklist")
@@ -42,10 +42,7 @@ struct HomeView: View {
 
 struct HomeTabView: View {
     @ObservedObject var viewModel: HomeViewModel
-    
     @AppStorage("name") var name: String?
-    @AppStorage("photo") var photo: String?
-    
     
     var showAlert: Binding<Bool> {
         Binding<Bool>(
@@ -78,12 +75,12 @@ struct HomeTabView: View {
     }
     
     func ShowAlert(message: String, title: String) -> Alert {
-            return Alert(
-                title: Text(title),
-                message: Text(message),
-                dismissButton: .default(Text("OK"))
-            )
-        }
+        return Alert(
+            title: Text(title),
+            message: Text(message),
+            dismissButton: .default(Text("OK"))
+        )
+    }
 }
 
 struct ActionButtonView: View {
@@ -109,7 +106,7 @@ struct ActionButtonView: View {
 
 struct RecordsScrollView: View {
     @ObservedObject var viewModel: HomeViewModel
-
+    
     var body: some View {
         ScrollView {
             ForEach(Array(viewModel.pontos.prefix(4)), id: \RegistroEntity.objectID) { ponto in
@@ -170,30 +167,38 @@ struct TasksTabView: View {
 
 struct UserInfoView: View {
     @AppStorage("name") var name: String?
-    @AppStorage("photo") var photo: String?
     @ObservedObject var viewModel: HomeViewModel
     
     var body: some View {
         HStack(spacing: 12) {
+            Spacer()
+            Text("\(name ?? "Usuário")")
+                .font(.headline)
             
             Menu {
                 Button(role: .destructive) {
                     viewModel.logout()
-                } label: {
+                }label: {
                     Label("Sair", systemImage: "arrow.backward.square")
+                    
                 }
+                
             } label: {
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 44, height: 44)
-                    .clipShape(Circle())
+                if let profileImage = viewModel.imagePerfil{
+                    profileImage
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: "person.circle.fill")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(Circle())
+                }
             }
             
-            Text("\(name ?? "Usuário")")
-                .font(.headline)
-            
-            Spacer()
         }
         .padding()
     }

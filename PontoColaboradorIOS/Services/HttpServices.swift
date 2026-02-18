@@ -24,7 +24,7 @@ class HttpServices {
     var production: Bool = false
     
     var urlString: String {
-        self.production ? "https://wrcode.tec.br" : "http://127.0.0.1:8080"
+        self.production ? "https://wrcode.tec.br" : "http://192.168.68.53:8080"
     }
     
     func validateToken(_ token: String) async -> Bool {
@@ -104,7 +104,8 @@ class HttpServices {
         } catch {
             return false
         }
-    }
+    }    
+    
 }
 
 enum LoginError: Error {

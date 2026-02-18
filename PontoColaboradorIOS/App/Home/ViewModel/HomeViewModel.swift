@@ -25,6 +25,8 @@ final class HomeViewModel: ObservableObject {
 
     @AppStorage("isAuthenticated") var isAuthenticated: Bool?
     @AppStorage("token") var token: String?
+    @AppStorage("photo") var photo: String?
+    var imagePerfil: Image?
 
     private let persistence = PersistenceController.shared
 
@@ -47,6 +49,19 @@ final class HomeViewModel: ObservableObject {
     //MARK: - INICIALIZADOR
     init(){
         self.pontos = (try? self.persistence.container.viewContext.fetch(RegistroEntity.fetchRequest())) ?? []
+        
+        //print("FOTO: \(self.photo ?? "NENHUMA")")
+        
+        //Removendo parametros iniciais do base64
+        if let photo = self.photo, let commaIndex = photo.firstIndex(of: ",") {
+            let base64Start = photo.index(after: commaIndex)
+            let base64 = String(photo[base64Start...])
+            // Convertendo o base64 em foto
+            if let data = Data(base64Encoded: base64),
+               let image = UIImage(data: data) {
+                self.imagePerfil = Image(uiImage: image)
+            }
+        } 
         
     }
 
@@ -137,6 +152,21 @@ final class HomeViewModel: ObservableObject {
         self.isAuthenticated = false
         self.email = nil
         self.token = nil
+    }
+    
+    var profileImage44x44: Image? {
+        guard let photoBase64 = self.photo,
+              let data = Data(base64Encoded: photoBase64),
+              let uiImage = UIImage(data: data) else {
+            return nil
+        }
+        // Resize the UIImage to 44x44
+        let size = CGSize(width: 44, height: 44)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let resized = renderer.image { _ in
+            uiImage.draw(in: CGRect(origin: .zero, size: size))
+        }
+        return Image(uiImage: resized)
     }
 
 }
