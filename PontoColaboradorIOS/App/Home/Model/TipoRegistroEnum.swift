@@ -6,10 +6,11 @@
 //
 
 public enum TipoRegistroEnum: String, Codable {
-    case entrada
-    case almoço
-    case almoçoRetorno
-    case saída
+    case ENTRADA
+    case INTERVALO_INICIO
+    case INTERVALO_FIM
+    case SAIDA
+
     
     enum CodingKeys: String, CodingKey {
         case rawValue = "tipoRegistro"

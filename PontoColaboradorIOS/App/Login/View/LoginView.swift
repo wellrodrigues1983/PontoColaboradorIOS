@@ -11,6 +11,9 @@ struct LoginView: View {
     //MARK: - PROPERTIES
     @StateObject private var viewModel = LoginViewModel()
     @State private var isSecured: Bool = true
+    @ObservedObject var locationManager = LocationManager.shared
+    @State private var showLocationRequest: Bool = false
+    @State private var showAlert = false
     
     var isAuthenticated: Binding<Bool> {
         Binding<Bool>(
@@ -96,7 +99,7 @@ struct LoginView: View {
                     }
                 }
                 //MARK: - Login Button
-                // Login Button
+                
                 Button(action: {
                     //Task { await viewModel.login() }
                     Task { await viewModel.doLogin() }
@@ -136,10 +139,25 @@ struct LoginView: View {
                 Spacer()
             }
             .padding(30)
+            .sheet(isPresented: $showLocationRequest) {
+                LocationRequestView(isPresented: $showLocationRequest)
+            }
             //MARK: - Full Screen Cover
-        }.fullScreenCover(isPresented: isAuthenticated) {
+        }
+        .alert(isPresented: $showAlert) {
+                    Alert(
+                        title: Text("Erro de Login"),
+                        message: Text(viewModel.errorMessage ?? "Erro desconhecido"),
+                        dismissButton: .default(Text("OK"))
+                    )
+                }
+                .onChange(of: viewModel.errorMessage) { newValue in
+                    showAlert = newValue != nil
+                }
+        .fullScreenCover(isPresented: isAuthenticated) {
             HomeView()
         }
+        
 
     }
     

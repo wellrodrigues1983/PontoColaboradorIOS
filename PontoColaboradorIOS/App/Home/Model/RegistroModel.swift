@@ -15,6 +15,8 @@ struct Registro: Codable, Identifiable {
     let tipoRegistro: TipoRegistroEnum?
     var sent: Bool
     let createdAt: Date
+    let latitude: Double
+    let longitude: Double
 
 //    init(userId: String, tipoRegistro?: TipoRegistroEnum? = nil) {
 //        let date: Date? = Date()

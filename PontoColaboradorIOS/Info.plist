@@ -17,5 +17,10 @@
             </dict>
         </dict>
     </dict>
+    
+    <!-- ADICIONE ESTAS CHAVES -->
+        <key>NSLocationWhenInUseUsageDescription</key>
+        <string>Precisamos da sua localização para registrar o ponto corretamente.</string>
+
 </dict>
 </plist>

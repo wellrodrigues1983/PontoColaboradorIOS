@@ -9,6 +9,7 @@ import Foundation
 import Combine
 internal import CoreData
 import SwiftUI
+import CoreLocation
 
 @MainActor
 final class LoginViewModel: ObservableObject {
@@ -19,13 +20,18 @@ final class LoginViewModel: ObservableObject {
     @AppStorage("isAuthenticated") var isAuthenticated: Bool?
     @AppStorage("token") var token: String?
     
+    let locationManager = LocationManager()
+    private var cancellables = Set<AnyCancellable>()
+    @Published private(set) var currentLocation: CLLocation? = nil
+    @Published private(set) var locationAuthorization: CLAuthorizationStatus = .notDetermined
+    
     @Published var isAuth: Bool?
-
+    
     private let httpService = HttpServices()
-
+    
     private let persistence = PersistenceController.shared
     @Published var currentUser: CurrentUserEntity? = nil
-
+    
     // MARK: - INICIALIZADOR
     init() {
         do {
@@ -35,17 +41,27 @@ final class LoginViewModel: ObservableObject {
         } catch {
             self.currentUser = nil
         }
-
+        
         if let tk = token {
             print("LoginViewModelV2 initialized. \(tk)")
-            isAuthenticated = true
+            //isAuthenticated = true
         } else {
             isAuthenticated = false
             print("Token not found")
         }
-
+        
+        // pedir permissão e observar updates
+        locationManager.requestLocation() // Adicionado para solicitar permissão
+        
+        locationManager.$location
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] loc in
+                self?.currentLocation = loc
+            }
+            .store(in: &cancellables)
+        
     }
-
+    
     // MARK: - VALIDAÇÕES
     var isEmailValid: Bool { !email.trimmed.isEmpty && email.isValidEmail }
     var emailValidationMessage: String? {
@@ -53,38 +69,47 @@ final class LoginViewModel: ObservableObject {
         if !email.isValidEmail { return "Email inválido." }
         return nil
     }
-
+    
     var isPasswordValid: Bool { !password.trimmed.isEmpty && password.isValidPassword() }
     var passwordValidationMessage: String? {
         if password.trimmed.isEmpty { return "Senha é obrigatória." }
         if !password.isValidPassword() { return "Senha deve ter ao menos 6 caracteres." }
         return nil
     }
-
+    
     var isFormValid: Bool { isEmailValid && isPasswordValid }
-
+    
     // MARK: - FUNÇÕES
     func doLogin() async -> Bool {
         errorMessage = nil
         isLoading = true
-
+        
         let loginRequest = LoginRequest(email: email.trimmed, password: password.trimmed)
-
+        
         do {
             let response = try await httpService.getLogin(loginRequest: loginRequest)
-            self.isAuthenticated = true
+            //self.isAuthenticated = true
+            if response.success == false{
+                errorMessage = response.errorMessage
+                self.isAuthenticated = false
+                isLoading = false
+            }
+            
+            if response.success == true {
+                self.isAuthenticated = true
+            }
             print("Login successful: \(response)")
             return true
-
+            
         } catch {
             // Handle and surface error
             errorMessage = error.localizedDescription
             return false
         }
-
+        
         isLoading = false
         return false
     }
-       
+    
     
 }

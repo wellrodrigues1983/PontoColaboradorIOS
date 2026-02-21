@@ -33,12 +33,24 @@
 		ACD8B7172EF1F8B6000A9E4F /* PontoColaboradorIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PontoColaboradorIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACD8B7292EF1F8B8000A9E4F /* PontoColaboradorIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PontoColaboradorIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACD8B7332EF1F8B8000A9E4F /* PontoColaboradorIOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PontoColaboradorIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		ACD8B76C2EF21CC5000A9E4F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		ACDEE93B2F467C3F00CB4511 /* Exceptions for "PontoColaboradorIOS" folder in "PontoColaboradorIOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = ACD8B7162EF1F8B6000A9E4F /* PontoColaboradorIOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ACD8B7192EF1F8B6000A9E4F /* PontoColaboradorIOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				ACDEE93B2F467C3F00CB4511 /* Exceptions for "PontoColaboradorIOS" folder in "PontoColaboradorIOS" target */,
+			);
 			path = PontoColaboradorIOS;
 			sourceTree = "<group>";
 		};
@@ -85,7 +97,6 @@
 		ACD8B70E2EF1F8B6000A9E4F = {
 			isa = PBXGroup;
 			children = (
-				ACD8B76C2EF21CC5000A9E4F /* Info.plist */,
 				ACD8B7192EF1F8B6000A9E4F /* PontoColaboradorIOS */,
 				ACD8B72C2EF1F8B8000A9E4F /* PontoColaboradorIOSTests */,
 				ACD8B7362EF1F8B8000A9E4F /* PontoColaboradorIOSUITests */,
@@ -417,6 +428,9 @@
 				DEVELOPMENT_TEAM = GCN6JSFACT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PontoColaboradorIOS/Info.plist;
+				"INFOPLIST_FILE[sdk=*]" = "";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Precisamos do acesso da sua localização";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -450,6 +464,8 @@
 				DEVELOPMENT_TEAM = GCN6JSFACT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PontoColaboradorIOS/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Precisamos do acesso da sua localização";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

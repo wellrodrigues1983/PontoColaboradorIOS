@@ -1,18 +1,18 @@
-//
-//  HomeViewModel.swift
-//  PontoColaboradorIOS
-//
-//  Created by Wellington Rodrigues on 05/01/26.
-//
-
 import Foundation
 internal import CoreData
 import Combine
 import SwiftUI
+import CoreLocation
+import UIKit
 
 final class HomeViewModel: ObservableObject {
 
-    //Mark: - PROPERTIES
+    let locationManager = LocationManager()
+    private var cancellables = Set<AnyCancellable>()
+    @Published private(set) var currentLocation: CLLocation? = nil
+    @Published private(set) var locationAuthorization: CLAuthorizationStatus = .notDetermined
+
+    // MARK: - PROPERTIES
     @Published var pontos: [RegistroEntity] = []
     @Published var tipo: Bool = false
     @Published var successMessage: String? = nil
@@ -20,7 +20,7 @@ final class HomeViewModel: ObservableObject {
     @Published var showAlert: Bool = false
     @Published var alertMessage: String? = nil
     @Published var alertTitle: String? = nil
-    
+
     @AppStorage("email") var email: String?
 
     @AppStorage("isAuthenticated") var isAuthenticated: Bool?
@@ -46,22 +46,19 @@ final class HomeViewModel: ObservableObject {
         return formatter
     }()
 
-    //MARK: - INICIALIZADOR
+    // MARK: - INICIALIZADOR
     init(){
         self.pontos = (try? self.persistence.container.viewContext.fetch(RegistroEntity.fetchRequest())) ?? []
-        
-        //print("FOTO: \(self.photo ?? "NENHUMA")")
-        
-        //Removendo parametros iniciais do base64
-        if let photo = self.photo, let commaIndex = photo.firstIndex(of: ",") {
-            let base64Start = photo.index(after: commaIndex)
-            let base64 = String(photo[base64Start...])
-            // Convertendo o base64 em foto
-            if let data = Data(base64Encoded: base64),
-               let image = UIImage(data: data) {
-                self.imagePerfil = Image(uiImage: image)
+
+        // pedir permissão e observar updates
+        locationManager.$location
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] loc in
+                self?.currentLocation = loc
             }
-        } 
+            .store(in: &cancellables)
+
+        processImage()
         
     }
 
@@ -69,7 +66,6 @@ final class HomeViewModel: ObservableObject {
         return self.pontos
     }
 
-    /// Retorna o início e o fim do dia para uma data específica
     private func dayBounds(for date: Date) -> (start: Date, end: Date) {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
@@ -77,24 +73,13 @@ final class HomeViewModel: ObservableObject {
         return (startOfDay, endOfDay)
     }
 
-    private func countRegistrosNoDia(
-        data: Date,
-        //context: NSManagedObjectContext
-    ) throws -> Int {
+    private func countRegistrosNoDia(data: Date) throws -> Int {
         let dateString = Self.dateFormatter.string(from: data)
-
-        let request: NSFetchRequest<NSFetchRequestResult> =
-            NSFetchRequest(entityName: "RegistroEntity")
-
-        request.predicate = NSPredicate(
-            format: "data == %@",
-            dateString
-        )
-
+        let request: NSFetchRequest<NSFetchRequestResult> = NSFetchRequest(entityName: "RegistroEntity")
+        request.predicate = NSPredicate(format: "data == %@", dateString)
         return try persistence.container.viewContext.count(for: request)
     }
 
-    /// Salva um novo ponto definindo a ordem do dia (1 a 4) com base na quantidade já existente
     @discardableResult
     func savePonto() -> Bool {
         let contexto = persistence.container.viewContext
@@ -103,36 +88,59 @@ final class HomeViewModel: ObservableObject {
         do {
             quantidadeHoje = try countRegistrosNoDia(data: agora)
             if quantidadeHoje > 3 {
-                //errorQuantidade = true
                 self.showAlert = true
                 self.alertMessage = "Limite diário de 4 pontos atingido."
                 self.alertTitle = "Atenção"
-                
-                //print("Não é possível registrar mais de 4 pontos por dia.")
                 return false
             }
         } catch {
             print("Erro ao contar registros do dia: \(error)")
             return false
         }
-  
+
         let ordemDoDia = quantidadeHoje + 1
 
         let novoPonto = RegistroEntity(context: contexto)
-        novoPonto.data = Self.dateFormatter.string(from: agora)  // Define a data atual como String
-        novoPonto.hora = Self.timeFormatter.string(from: agora)  // Define a hora atual como String
-        novoPonto.email = self.email  // Define o email do usuário atual
+        novoPonto.data = Self.dateFormatter.string(from: agora)
+        novoPonto.hora = Self.timeFormatter.string(from: agora)
+        novoPonto.email = self.email
+
+        // não trava: salva mesmo sem localização; usa 0.0 como valor padrão
+        let lat = currentLocation?.coordinate.latitude ?? 0.0
+        let lon = currentLocation?.coordinate.longitude ?? 0.0
+        novoPonto.latitude = lat
+        novoPonto.longitude = lon
+
+        if currentLocation == nil {
+            self.showAlert = true
+            self.alertTitle = "Localização indisponível"
+            self.alertMessage = "Ponto salvo sem coordenadas. Habilite localização nas configurações para registrar coordenadas."
+        }
 
         if let attr = novoPonto.entity.attributesByName["ordemDoDia"], attr.attributeType == .integer16AttributeType {
             novoPonto.setValue(Int16(ordemDoDia), forKey: "ordemDoDia")
         }
 
+        // evita problemas com aspas internas usando variáveis temporárias
+        let dataStr = novoPonto.data ?? "-"
+        let horaStr = novoPonto.hora ?? "-"
+        let emailStr = novoPonto.email ?? "-"
+
+        print("Data: \(dataStr)")
+        print("Hora: \(horaStr)")
+        print("Email: \(emailStr)")
+        print("Latitude: \(novoPonto.latitude)")
+        print("Longitude: \(novoPonto.longitude)")
+        print("Ordem do Dia: \(novoPonto.ordemDoDia)")
+
         do {
             try contexto.save()
             fechPontos()
-            self.showAlert = true
-            self.alertTitle = "Sucesso"
-            self.alertMessage = "Ponto registrado com sucesso!"
+            if self.alertTitle != "Localização indisponível" {
+                self.showAlert = true
+                self.alertTitle = "Sucesso"
+                self.alertMessage = "Ponto registrado com sucesso!"
+            }
             return true
         } catch {
             print("Erro ao salvar ponto: \(error)")
@@ -140,33 +148,31 @@ final class HomeViewModel: ObservableObject {
             return false
         }
     }
-    
+
     func fechPontos(){
-            let contexto = persistence.container.viewContext
-            let request = RegistroEntity.fetchRequest()
-            request.predicate = NSPredicate(format: "data == %@", Self.dateFormatter.string(from: Date()))
-            self.pontos = (try? contexto.fetch(request)) ?? []
-        }
-    
+        let contexto = persistence.container.viewContext
+        let request = RegistroEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "data == %@", Self.dateFormatter.string(from: Date()))
+        self.pontos = (try? contexto.fetch(request)) ?? []
+    }
+
     func logout() {
         self.isAuthenticated = false
         self.email = nil
         self.token = nil
-    }
-    
-    var profileImage44x44: Image? {
-        guard let photoBase64 = self.photo,
-              let data = Data(base64Encoded: photoBase64),
-              let uiImage = UIImage(data: data) else {
-            return nil
-        }
-        // Resize the UIImage to 44x44
-        let size = CGSize(width: 44, height: 44)
-        let renderer = UIGraphicsImageRenderer(size: size)
-        let resized = renderer.image { _ in
-            uiImage.draw(in: CGRect(origin: .zero, size: size))
-        }
-        return Image(uiImage: resized)
+        self.photo = nil
     }
 
+    func processImage(){
+        // Removendo parametros iniciais do base64
+        if let photo = self.photo, let commaIndex = photo.firstIndex(of: ",") {
+            let base64Start = photo.index(after: commaIndex)
+            let base64 = String(photo[base64Start...])
+            if let data = Data(base64Encoded: base64),
+               let image = UIImage(data: data) {
+                self.imagePerfil = Image(uiImage: image)
+            }
+        }
+    }
+   
 }

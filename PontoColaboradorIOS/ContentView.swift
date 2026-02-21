@@ -13,6 +13,10 @@ struct ContentView: View {
     //@State private var isLoggedIn: Bool?
     @AppStorage("isAuthenticated") var isLoggedIn: Bool?
     @AppStorage("token") var token: String = ""
+    @AppStorage("name") var name: String?
+    @AppStorage("email") var email: String?
+    @AppStorage("photo") var photo: String?
+    
     var service = HttpServices()
 
     var body: some View {
@@ -38,35 +42,14 @@ struct ContentView: View {
     }
 
     private func checkAuthentication() async {
-        
-        let service = HttpServices()
-        
-//        let keychainService = "br.tec.wrcode"
-//        let keychainAccount = "authToken"
-//        guard let token = KeychainHelper.standard.readString(service: keychainService, account: keychainAccount) else {
-//            isLoggedIn = false
-//            return
-//        }
         let isValid = await service.validateToken(token)
-        isLoggedIn = isValid
-        print("Token valid: \(self.isLoggedIn)")
+        if isValid && name != nil && email != nil {
+            isLoggedIn = true
+        } else {
+            isLoggedIn = false
+        }
     }
 
-//    private func validateToken(_ token: String) async -> Bool {
-//        let tokenURL = URL(string: "https://your-api-url/auth/check")! // Substitua pela URL real
-//        var req = URLRequest(url: tokenURL)
-//        req.httpMethod = "GET"
-//        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-//        do {
-//            let (_, resp) = try await URLSession.shared.data(for: req)
-//            if let http = resp as? HTTPURLResponse {
-//                return http.statusCode == 200
-//            }
-//        } catch {
-//            return false
-//        }
-//        return false
-//    }
 }
 
 struct ContentView_Previews: PreviewProvider {
